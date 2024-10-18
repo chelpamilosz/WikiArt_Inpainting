@@ -1,9 +1,11 @@
-from PIL import Image, ImageDraw, JpegImagePlugin, PngImagePlugin
+from PIL import Image, ImageDraw, JpegImagePlugin
 from io import BytesIO
 import numpy as np
 from datasets import load_dataset
 
 def generate_square_damage(image: JpegImagePlugin.JpegImageFile, square_side=64) -> JpegImagePlugin.JpegImageFile:
+    image = image.copy()
+    
     draw = ImageDraw.Draw(image)
 
     x = np.random.randint(0, image.size[0] - square_side)
@@ -17,7 +19,6 @@ def generate_square_damage(image: JpegImagePlugin.JpegImageFile, square_side=64)
     image.save(buffer, format='JPEG', quality=100)
     buffer.seek(0)  # Cofnięcie wskaźnika na początek bufora
 
-    # Załadowanie obrazu jako PngImageFile
     return Image.open(buffer)
 
 def add_damaged_images(batch):
@@ -25,8 +26,6 @@ def add_damaged_images(batch):
     return batch
 
 if __name__ == '__main__':
-    ds = load_dataset('Artificio/WikiArt_Full', split='train')  # Replace with your dataset loading logic
-    ds_test = ds.select(range(500))
-    ds_with_damaged_images = ds_test.map(add_damaged_images, batched=True, num_proc=4)
+    ds = load_dataset('Artificio/WikiArt_Full', split='train')
+    ds_with_damaged_images = ds.map(add_damaged_images, batched=True, num_proc=4)
     ds_with_damaged_images.save_to_disk('WikiArt_damaged')
-    ds_test.save_to_disk('WikiArt')
