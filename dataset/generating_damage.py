@@ -29,3 +29,4 @@ if __name__ == '__main__':
     ds = load_dataset('Artificio/WikiArt_Full', split='train')
     ds_with_damaged_images = ds.map(add_damaged_images, batched=True, num_proc=4)
     ds_with_damaged_images.save_to_disk('WikiArt_damaged')
+
