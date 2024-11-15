@@ -18,16 +18,16 @@ def generate_square_damage(image: Image.Image, square_side=64) -> Image.Image:
     return image
 
 if __name__ == '__main__':
-    ds = load_from_disk(r'C:\vscodeProjects\WikiArt_Inpainting\WikiArt_damaged_100')
+    ds = load_from_disk(r'C:\vscodeProjects\WikiArt_Inpainting\WikiArt_damaged')
     
     print('ds loaded')
 
     start = time()
     num_images = len(ds)
-    batch_size = num_images
+    batch_size = 2000
 
-    # sample_image = generate_square_damage(ds[0]['image'], square_side=32).convert("RGB")
-    sample_image = ds[0]['image'].convert('RGB')
+    sample_image = generate_square_damage(ds[0]['image'], square_side=32).convert("RGB")
+    # sample_image = ds[0]['image'].convert('RGB')
     image_shape = (3, sample_image.height, sample_image.width)
 
     print('sample image done')
@@ -42,8 +42,8 @@ if __name__ == '__main__':
             batch_images = ds[i:i + batch_size]['image']
 
             batch_data = [
-                # np.array(generate_square_damage(img, square_side=32).convert("RGB"), dtype=np.uint8).transpose(2, 0, 1)
-                np.array(img.convert('RGB'), dtype=np.uint8).transpose(2, 0, 1)
+                np.array(generate_square_damage(img, square_side=32).convert("RGB"), dtype=np.uint8).transpose(2, 0, 1)
+                # np.array(img.convert('RGB'), dtype=np.uint8).transpose(2, 0, 1)
                 for img in tqdm(batch_images, desc='Batch progress', position=1, leave=False)
             ]
 
