@@ -2,6 +2,7 @@ import dash
 from dash import dcc, html, Input, Output
 import plotly.express as px
 import numpy as np
+from PIL import Image
 import torch
 import torch.nn as nn
 import h5py
@@ -10,14 +11,6 @@ from torch.utils.data import DataLoader, Dataset
 
 class WikiArtDataset(Dataset):
     def __init__(self, h5_path: str, transform=None, mask_transform=None):
-        """
-        A dataset for WikiArt data integrated with HDF5 image and mask reading.
-
-        Parameters:
-            h5_path (str): Path to the HDF5 file containing images and masks.
-            transform (callable, optional): A function to transform the images.
-            mask_transform (callable, optional): A function to transform the masks.
-        """
         self.h5_path = h5_path
         self.transform = transform
         self.mask_transform = mask_transform
@@ -26,47 +19,45 @@ class WikiArtDataset(Dataset):
             self.length = len(h5f['images'])
 
     def __len__(self):
-        """
-        Returns the total number of elements in the dataset.
-
-        Returns:
-            int: The number of images in the dataset.
-        """
         return self.length
 
     def _open_hdf5(self):
-        """
-        Opens the HDF5 file if it hasn't been opened yet.
-        """
         if not hasattr(self, '_hf') or self._hf is None:
             self._hf = h5py.File(self.h5_path, 'r')
 
+    def _generate_square_mask(self, image: Image.Image, min_square_side=14, max_square_side=24):
+        width, height = image.size
+
+        mask = np.zeros((height, width), dtype=np.uint8)
+
+        square_side = np.random.randint(min_square_side, max_square_side + 1)
+        
+        x = np.random.randint(0, width - square_side)
+        y = np.random.randint(0, height - square_side)
+
+        mask[y:y + square_side, x:x + square_side] = 1
+        
+        return mask
+
     def __getitem__(self, idx):
-        """
-        Retrieves an image and its corresponding mask based on the given index.
-
-        Parameters:
-            idx (int): The index of the element to retrieve.
-
-        Returns:
-            tuple: A tuple containing the image (torch.Tensor) and the mask (torch.Tensor).
-        """
         self._open_hdf5()
 
         image = self._hf['images'][idx]
-        mask = self._hf['masks'][idx]
-
         image = torch.from_numpy(image).float()
-        mask = torch.from_numpy(mask).float()
 
         if self.transform:
             image = self.transform(image)
+
+        # Generate mask
+        pil_image = Image.fromarray(image.numpy().astype(np.uint8).transpose(1, 2, 0))
+        mask = self._generate_square_mask(pil_image)
+        mask = torch.from_numpy(mask).float()
 
         if self.mask_transform:
             mask = self.mask_transform(mask)
 
         return image, mask
-
+    
 class UNetInpainting(nn.Module):
     def __init__(self, in_channels=3, out_channels=3, use_dropout=False):
         super().__init__()
