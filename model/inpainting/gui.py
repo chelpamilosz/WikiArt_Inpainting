@@ -1,11 +1,11 @@
 import dash
-from dash import dcc, html, Input, Output
-import plotly.express as px
+from dash import Dash, dcc, html, Input, Output
 
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from PIL import Image
 import os
 
 import timm
@@ -144,45 +144,54 @@ h5_path = f'{CURRENT_DIR}\\wikiart\\dataset.h5'
 annotations_path = f'{CURRENT_DIR}\\wikiart\\clustered_full_split.csv'
 mask_h5_path = f'{CURRENT_DIR}\\masks\\square.h5'
 
-app = dash.Dash(__name__)
+app = Dash(__name__)
 
 # Global index to keep the same image when just randomizing mask
 current_image_idx = None
 
 app.layout = html.Div([
     html.Div([
-        html.Label("Wybierz ID grupy:"),
-        dcc.Dropdown(
-            id='group-id-dropdown',
-            options=[{'label': str(i), 'value': i} for i in range(7)],
-            value=0
-        ),
-        html.Button("Losuj obraz", id='random-button', n_clicks=0),
-        html.Button("Losuj maskę", id='random-mask-button', n_clicks=0)
-    ], style={'margin-bottom': '20px'}),
+        html.H1('WikiArt Inpainting', style={'textAlign': 'center', 'margin-bottom': '20px'}),
+
+        html.Div([
+            html.Label("Wybierz ID grupy:", style={'font-weight': 'bold', 'margin-bottom': '15px', 'display': 'block'}),
+            dcc.Dropdown(
+                id='group-id-dropdown',
+                options=[{'label': f'Grupa {i}', 'value': i} for i in range(7)],
+                value=0,
+                style={'width': '50%', 'margin-bottom': '20px', 'margin': '0 auto'}
+            ),
+            html.Div([
+                html.Button("Losuj obraz", id='random-button', n_clicks=0,
+                            style={'margin-right': '10px', 'padding': '10px', 'background-color': '#4CAF50', 'color': 'white', 'border': 'none'}),
+                html.Button("Losuj maskę", id='random-mask-button', n_clicks=0,
+                            style={'padding': '10px', 'background-color': '#f0ad4e', 'color': 'white', 'border': 'none'})
+            ], style={'margin-top': '15px'})
+        ], style={'margin-bottom': '20px', 'textAlign': 'center'})
+    ], style={'background-color': '#f9f9f9', 'padding': '20px', 'border-bottom': '2px solid #ddd'}),
 
     html.Div([
         html.Div([
-            html.H3("Oryginał"),
-            html.Img(id='original-image', style={'width': '300px', 'margin-right': '20px'})
-        ], style={'display': 'inline-block'}),
+            html.H3("Oryginał", style={'textAlign': 'center'}),
+            html.Img(id='original-image', style={'width': '100%', 'border': '1px solid #ddd', 'border-radius': '5px', 'padding': '5px'})
+        ], style={'width': '22%', 'display': 'inline-block', 'vertical-align': 'top', 'padding': '10px'}),
 
         html.Div([
-            html.H3("Maska"),
-            html.Img(id='mask-image', style={'width': '300px', 'margin-right': '20px'})
-        ], style={'display': 'inline-block'}),
+            html.H3("Maska", style={'textAlign': 'center'}),
+            html.Img(id='mask-image', style={'width': '100%', 'border': '1px solid #ddd', 'border-radius': '5px', 'padding': '5px'})
+        ], style={'width': '22%', 'display': 'inline-block', 'vertical-align': 'top', 'padding': '10px'}),
 
         html.Div([
-            html.H3("Obraz z maską"),
-            html.Img(id='masked-image', style={'width': '300px', 'margin-right': '20px'})
-        ], style={'display': 'inline-block'}),
+            html.H3("Obraz z maską", style={'textAlign': 'center'}),
+            html.Img(id='masked-image', style={'width': '100%', 'border': '1px solid #ddd', 'border-radius': '5px', 'padding': '5px'})
+        ], style={'width': '22%', 'display': 'inline-block', 'vertical-align': 'top', 'padding': '10px'}),
 
         html.Div([
-            html.H3("Wynik"),
-            html.Img(id='output-image', style={'width': '300px'})
-        ], style={'display': 'inline-block'})
-    ])
-])
+            html.H3("Wynik", style={'textAlign': 'center'}),
+            html.Img(id='output-image', style={'width': '100%', 'border': '1px solid #ddd', 'border-radius': '5px', 'padding': '5px'})
+        ], style={'width': '22%', 'display': 'inline-block', 'vertical-align': 'top', 'padding': '10px'})
+    ], style={'textAlign': 'center', 'background-color': '#fff', 'padding': '20px'})
+], style={'font-family': 'Arial, sans-serif', 'max-width': '1200px', 'margin': '0 auto'})
 
 @app.callback(
     [
@@ -216,21 +225,20 @@ def update_images(group_id, n_clicks_image, n_clicks_mask):
 
     image, mask, _ = test_dataset[current_image_idx]
 
-    # In any case (random mask or random image), we get a new random mask from the dataset
+    # Generate images using the model
     with torch.no_grad():
         masked_image = image * (1 - mask)
         output = model(image.unsqueeze(0), mask.unsqueeze(0).unsqueeze(0))[0]
 
     import base64
     import io
-    from PIL import Image
-
+    
     def to_base64(tensor, is_mask=False):
         arr = tensor.clone().detach().cpu().numpy()
         if not is_mask:
-            arr = arr.transpose(1,2,0).clip(0,255).astype(np.uint8)
+            arr = arr.transpose(1, 2, 0).clip(0, 255).astype(np.uint8)
         else:
-            arr = (arr * 255).clip(0,255).astype(np.uint8)
+            arr = (arr * 255).clip(0, 255).astype(np.uint8)
         pil_img = Image.fromarray(arr.squeeze())
         buffer = io.BytesIO()
         pil_img.save(buffer, format="PNG")
