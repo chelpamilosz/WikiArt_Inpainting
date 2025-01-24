@@ -164,3 +164,4 @@ cython_debug/
 # Datasets
 WikiArt_damaged
 WikiArt_damaged_100
+*.h5
