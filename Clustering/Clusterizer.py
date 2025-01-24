@@ -1,12 +1,3 @@
-#Biblioteki i pakiety
-import numpy as np
-import pandas as pd
-import torch
-import torch.nn as nn
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from torch.utils.data import DataLoader
-
 import numpy as np
 from sklearn.cluster import KMeans, SpectralClustering
 from sklearn.metrics import silhouette_score, calinski_harabasz_score
@@ -15,10 +6,10 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import umap
 import matplotlib.pyplot as plt
-from matplotlib import colors
 
 from tqdm import tqdm
 from joblib import dump, load
+import os
 
 class Clusterizer():
     def __init__(self, comet_logger):
@@ -28,7 +19,9 @@ class Clusterizer():
         self.train_features = None
         self.valid_features = None
         self.test_features = None
-    
+
+        self.repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
     def load_features(self, type, features_path):
         if type == 'train':
             self.train_features = np.load(features_path)
@@ -239,12 +232,14 @@ class Clusterizer():
             kmeans = KMeans(n_clusters=n_clusters, random_state=1234)
             cluster_labels = kmeans.fit_predict(features)
 
-            # Zapis modelu KMeans
-            dump(kmeans, '/content/drive/MyDrive/Models/kmeans_model.pkl')
-            print("Model KMeans zapisany w: /content/drive/MyDrive/Models/kmeans_model.pkl")
+            # Save KMeans model
+            kmeans_path = os.path.join(self.repo_root, 'models', 'kmeans_model.pkl')
+            os.makedirs(os.path.dirname(kmeans_path), exist_ok=True)
+            dump(kmeans, kmeans_path)
+            print(f"Model KMeans zapisany w: {kmeans_path}")
 
-            # Zapis klastrów i indeksów do pliku
-            save_file_name = f'/content/drive/MyDrive/{type}_clusters.npz'
+            # Save clusters and indices
+            save_file_name = os.path.join(self.repo_root, f'{type}_clusters.npz')
             np.savez_compressed(save_file_name, cluster_labels=cluster_labels, indices=indices)
             print(f"Klastry i indeksy zapisane w: {save_file_name}")
             return save_file_name
@@ -253,13 +248,14 @@ class Clusterizer():
             # Klasteryzacja zbioru walidacyjnego
             features = self.valid_features['features']
             indices = self.valid_features['indices']  # Pobranie istniejących indeksów
-            kmeans = load('/content/drive/MyDrive/Models/kmeans_model.pkl')
-            print("Załadowano model KMeans z: /content/drive/MyDrive/Models/kmeans_model.pkl")
+            kmeans_path = os.path.join(self.repo_root, 'models', 'kmeans_model.pkl')
+            kmeans = load(kmeans_path)
+            print(f"Załadowano model KMeans z: {kmeans_path}")
 
             cluster_labels = kmeans.predict(features)
 
             # Zapis klastrów i indeksów do pliku
-            save_file_name = f'/content/drive/MyDrive/{type}_clusters.npz'
+            save_file_name = os.path.join(self.repo_root, f'{type}_clusters.npz')
             np.savez_compressed(save_file_name, cluster_labels=cluster_labels, indices=indices)
             print(f"Klastry i indeksy zapisane w: {save_file_name}")
             return save_file_name
@@ -269,9 +265,10 @@ class Clusterizer():
             if image_features is None:
                 raise ValueError("Dla typu 'test' wymagane jest przekazanie cech obrazu (image_features).")
 
-            features = image_features['features']
-            kmeans = load('/content/drive/MyDrive/Models/kmeans_model.pkl')
-            print("Załadowano model KMeans z: /content/drive/MyDrive/Models/kmeans_model.pkl")
+            features = image_features
+            kmeans_path = os.path.join(self.repo_root, 'models', 'kmeans_model.pkl')
+            kmeans = load(kmeans_path)
+            print(f"Załadowano model KMeans z: {kmeans_path}")
 
             cluster_labels = kmeans.predict(features)
             return cluster_labels
