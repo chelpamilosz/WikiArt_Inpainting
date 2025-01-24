@@ -165,5 +165,3 @@ cython_debug/
 WikiArt_damaged
 WikiArt_damaged_100
 *.h5
-*.pth
-*.csv
