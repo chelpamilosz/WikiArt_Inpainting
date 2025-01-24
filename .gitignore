@@ -164,5 +164,4 @@ cython_debug/
 # Datasets
 WikiArt_damaged
 WikiArt_damaged_100
-damaged_images_tensor_data.h5
-images_tensor_data.h5
+*.pth
